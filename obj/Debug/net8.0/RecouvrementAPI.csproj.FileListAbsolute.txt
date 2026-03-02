@@ -1,0 +1,7 @@
+C:\RecouvrementAPI\obj\Debug\net8.0\RecouvrementAPI.csproj.AssemblyReference.cache
+C:\RecouvrementAPI\obj\Debug\net8.0\RecouvrementAPI.GeneratedMSBuildEditorConfig.editorconfig
+C:\RecouvrementAPI\obj\Debug\net8.0\RecouvrementAPI.AssemblyInfoInputs.cache
+C:\RecouvrementAPI\obj\Debug\net8.0\RecouvrementAPI.AssemblyInfo.cs
+C:\RecouvrementAPI\obj\Debug\net8.0\RecouvrementAPI.csproj.CoreCompileInputs.cache
+C:\RecouvrementAPI\obj\Debug\net8.0\RecouvrementAPI.MvcApplicationPartsAssemblyInfo.cs
+C:\RecouvrementAPI\obj\Debug\net8.0\RecouvrementAPI.MvcApplicationPartsAssemblyInfo.cache
