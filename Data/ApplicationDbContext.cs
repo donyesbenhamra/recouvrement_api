@@ -23,7 +23,7 @@ namespace RecouvrementAPI.Data
         public DbSet<Client> Clients { get; set; }
 
         // Table agent (back-office)
-        public DbSet<Agent> Agents { get; set; }
+        public DbSet<UtilisateurBack> UtilisateursBack { get; set; }
 
         // Table dossier_recouvrement
         public DbSet<DossierRecouvrement> Dossiers { get; set; }

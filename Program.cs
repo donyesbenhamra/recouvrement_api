@@ -23,7 +23,7 @@ var serverVersion = new MySqlServerVersion(new Version(8, 0, 31));
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(connectionString, serverVersion));
 
-// ✅ AJOUT 1 : JWT Authentication
+//  AJOUT 1 : JWT Authentication
 // Pour sécuriser le back-office agent avec un token JWT
 var jwtKey = builder.Configuration["Jwt:Key"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];

@@ -3,11 +3,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RecouvrementAPI.Models
 {
-    [Table("agent")] // Lie cette classe à la table "agent" dans la base de données
-    public class Agent
+    [Table("utilisateur_back")] // Lie cette classe à la table "utilisateur_back" dans la base de données
+    public class UtilisateurBack
     {
         [Key] // Clé primaire
-        [Column("id_agent")] // Correspond à la colonne id_agent
+        [Column("id_utilisateur_back")] // Correspond à la colonne id_utilisateur_back
         public int IdAgent { get; set; }
 
         [Column("id_agence")] 
@@ -45,7 +45,7 @@ namespace RecouvrementAPI.Models
         public string Role { get; set; }
         // Rôle de l’agent (ex: admin, agent_recouvrement)
 
-        // 🔗 Relation avec Agence
+        // Relation avec Agence
         [ForeignKey("IdAgence")]
         public Agence Agence { get; set; }
         // Navigation : permet d’accéder à l’agence de l’agent
