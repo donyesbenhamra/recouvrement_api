@@ -473,6 +473,114 @@ public async Task<IActionResult> GenerateRecu(string token, [FromQuery] int? idD
                 // sache à quel dossier l'upload a été rattaché (utile si idDossier était null)
                 idDossierUtilise = dossier.IdDossier
             });
+            
         }
+        // GET api/client/historique-pdf/{token}/{idDossier}
+[HttpGet("historique-pdf/{token}/{idDossier}")]
+public async Task<IActionResult> GenerateHistoriquePdf(string token, int idDossier)
+{
+    var client = await _context.Clients
+        .Include(c => c.Agence)
+        .Include(c => c.Dossiers)
+            .ThenInclude(d => d.Echeances)
+        .Include(c => c.Dossiers)
+            .ThenInclude(d => d.HistoriquePaiements)
+        .Include(c => c.Dossiers)
+            .ThenInclude(d => d.Relances)
+        .Include(c => c.Dossiers)
+            .ThenInclude(d => d.Communications)
+        .FirstOrDefaultAsync(c => c.TokenAcces == token);
+
+    if (client == null)
+        return Unauthorized("Token invalide");
+
+    var dossier = client.Dossiers.FirstOrDefault(d => d.IdDossier == idDossier);
+
+    if (dossier == null)
+        return NotFound("Dossier introuvable");
+
+    int joursRetard = CalculerJoursRetard(dossier);
+
+    var document = Document.Create(container =>
+    {
+        container.Page(page =>
+        {
+            page.Margin(40);
+            page.Size(PageSizes.A4);
+            page.DefaultTextStyle(x => x.FontSize(11));
+
+            page.Header().Column(col =>
+            {
+                col.Item().Row(row =>
+                {
+                    row.RelativeItem().Text("HISTORIQUE DU DOSSIER")
+                        .FontSize(20).SemiBold().FontColor(Colors.Blue.Medium);
+                    row.RelativeItem().AlignRight()
+                        .Text($"Édité le {DateTime.Now:dd/MM/yyyy}");
+                });
+                col.Item().Text($"Client : {client.Nom} {client.Prenom}  |  Agence : {client.Agence?.Ville}");
+                col.Item().LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
+            });
+
+            page.Content().PaddingVertical(20).Column(col =>
+            {
+                col.Spacing(16);
+
+                col.Item().Background(Colors.Grey.Lighten4).Padding(12).Column(inner =>
+                {
+                    inner.Item().Text("INFORMATIONS DU DOSSIER").Bold().FontSize(12);
+                    inner.Item().Text($"Montant initial : {dossier.MontantInitial} TND");
+                    inner.Item().Text($"Montant impayé : {dossier.MontantImpaye} TND");
+                    inner.Item().Text($"Jours de retard : {joursRetard}");
+                    inner.Item().Text($"Statut : {dossier.StatutDossier.ToUpper()}");
+                    inner.Item().Text($"Type : {dossier.TypeEmprunt}");
+                });
+
+                col.Item().Text("ÉCHÉANCES").Bold().FontSize(12).FontColor(Colors.Blue.Medium);
+                foreach (var e in dossier.Echeances)
+                {
+                    col.Item().Row(row =>
+                    {
+                        row.RelativeItem().Text($"{e.DateEcheance:dd/MM/yyyy}");
+                        row.RelativeItem().Text($"{e.Montant} TND");
+                        row.RelativeItem().Text(e.Statut.ToUpper());
+                    });
+                }
+
+                col.Item().Text("PAIEMENTS").Bold().FontSize(12).FontColor(Colors.Blue.Medium);
+                foreach (var p in dossier.HistoriquePaiements)
+                {
+                    col.Item().Row(row =>
+                    {
+                        row.RelativeItem().Text($"{p.DatePaiement:dd/MM/yyyy}");
+                        row.RelativeItem().Text($"{p.MontantPaye} TND");
+                        row.RelativeItem().Text(p.TypePaiement);
+                    });
+                }
+
+                col.Item().Text("COMMUNICATIONS").Bold().FontSize(12).FontColor(Colors.Blue.Medium);
+                foreach (var c in dossier.Communications)
+                {
+                    col.Item().Column(inner =>
+                    {
+                        inner.Item().Text($"{c.DateEnvoi:dd/MM/yyyy HH:mm} — {c.Origine.ToUpper()}")
+                            .FontSize(10).FontColor(Colors.Grey.Medium);
+                        inner.Item().Text(c.Message);
+                    });
+                }
+            });
+
+            page.Footer().AlignCenter().Text(x =>
+            {
+                x.Span("Document généré automatiquement — Page ");
+                x.CurrentPageNumber();
+            });
+        });
+    });
+
+    byte[] pdfBytes = document.GeneratePdf();
+    return File(pdfBytes, "application/pdf", $"Historique_Dossier_{idDossier}.pdf");
+}
     }
+    
 }
