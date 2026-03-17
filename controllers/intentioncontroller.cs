@@ -127,6 +127,44 @@ namespace RecouvrementAPI.Controllers
                     DateAction = DateTime.Now
                 });
             }
+            // CAS : Règlement partiel
+else if (intention.TypeIntention == "paiement_partiel")
+{
+    _context.Communications.Add(new Communication
+    {
+        IdDossier = intention.IdDossier,
+        Message = $"Le client propose un règlement partiel de {intention.MontantPropose} TND.{commentairePart}",
+        Origine = "systeme",
+        DateEnvoi = DateTime.Now
+    });
+    _context.HistoriqueActions.Add(new HistoriqueAction
+    {
+        IdDossier = intention.IdDossier,
+        ActionDetail = $"Règlement partiel proposé : {intention.MontantPropose} TND",
+        Acteur = "client",
+        DateAction = DateTime.Now
+    });
+}
+
+// CAS : Demande de consolidation
+else if (intention.TypeIntention == "demande_consolidation")
+{
+    _context.Communications.Add(new Communication
+    {
+        IdDossier = intention.IdDossier,
+        Message = $"Le client demande une consolidation de ses dettes.{commentairePart}",
+        Origine = "systeme",
+        DateEnvoi = DateTime.Now
+    });
+    _context.HistoriqueActions.Add(new HistoriqueAction
+    {
+        IdDossier = intention.IdDossier,
+        ActionDetail = "Demande de consolidation soumise",
+        Acteur = "client",
+        DateAction = DateTime.Now
+    });
+}
+
 
             // ==============================
             // CAS 3 : Réclamation
