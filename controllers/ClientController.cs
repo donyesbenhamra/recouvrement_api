@@ -144,6 +144,13 @@ namespace RecouvrementAPI.Controllers
         {
             int joursRetard = CalculerJoursRetard(dossier);
 
+            // Prépare les réponses banque (communications origine=agent) pour enrichir les relances
+            // Convention: message préfixé par "[canal] ..."
+            var communicationsBanque = dossier.Communications
+                .Where(c => c.Origine == "agent")
+                .OrderBy(c => c.DateEnvoi)
+                .ToList();
+
             return new DossierDto
             {
                 IdDossier      = dossier.IdDossier,
@@ -188,12 +195,28 @@ namespace RecouvrementAPI.Controllers
                     DatePaiement = p.DatePaiement
                 }).ToList(),
 
-                Relances = dossier.Relances.Select(r => new RelanceDto
-                {
-                    DateRelance = r.DateRelance,
-                    Moyen       = r.Moyen,
-                    Statut      = r.Statut
-                }).ToList(),
+                Relances = dossier.Relances
+                    .OrderByDescending(r => r.DateRelance)
+                    .Select(r =>
+                    {
+                        // Cherche la 1ère réponse banque après la relance, avec le même canal si possible
+                        string canal = (r.Moyen ?? "").Trim().ToLowerInvariant();
+                        string prefix = $"[{canal}]";
+
+                        var rep = communicationsBanque.FirstOrDefault(c =>
+                            c.DateEnvoi >= r.DateRelance &&
+                            (string.IsNullOrEmpty(canal) || (c.Message != null && c.Message.StartsWith(prefix))));
+
+                        return new RelanceDto
+                        {
+                            DateRelance = r.DateRelance,
+                            Moyen = r.Moyen,
+                            Statut = r.Statut,
+                            ReponseBanque = rep != null ? rep.Message : null,
+                            DateReponseBanque = rep != null ? rep.DateEnvoi : default
+                        };
+                    })
+                    .ToList(),
 
                 Communications = dossier.Communications.Select(c => new CommunicationDto
                 {
@@ -274,6 +297,55 @@ namespace RecouvrementAPI.Controllers
             };
 
             return Ok(dto);
+        }
+
+        // ==============================
+        // POST api/client/message/{token}/{idDossier}
+        //
+        // Permet au client d'envoyer un message libre à la banque
+        // (visible dans l'historique du dossier).
+        // ==============================
+        [HttpPost("message/{token}/{idDossier:int}")]
+        public async Task<IActionResult> EnvoyerMessageClient(
+            string token,
+            int idDossier,
+            [FromBody] ClientMessageRequestDto request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.Message))
+                return BadRequest("Message requis");
+
+            var client = await VerifierToken(token);
+            if (client == null)
+                return Unauthorized("Token invalide");
+
+            // Vérifie que le dossier appartient au client (anti-manipulation)
+            var dossier = await _context.Dossiers
+                .FirstOrDefaultAsync(d => d.IdDossier == idDossier && d.IdClient == client.IdClient);
+
+            if (dossier == null)
+                return NotFound("Dossier introuvable");
+
+            var message = request.Message.Trim();
+
+            _context.Communications.Add(new Communication
+            {
+                IdDossier = dossier.IdDossier,
+                Message = message,
+                Origine = "client",
+                DateEnvoi = DateTime.Now
+            });
+
+            _context.HistoriqueActions.Add(new HistoriqueAction
+            {
+                IdDossier = dossier.IdDossier,
+                ActionDetail = "Message libre envoyé par le client via le portail",
+                Acteur = "client",
+                DateAction = DateTime.Now
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Message envoyé" });
         }
 // ==============================
         // GET api/client/recu/{token}

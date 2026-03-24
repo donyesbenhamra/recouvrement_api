@@ -69,7 +69,28 @@ namespace RecouvrementAPI.Controllers
             string commentairePart = string.IsNullOrEmpty(intention.Commentaire)
                 ? ""
                 : $" Commentaire : {intention.Commentaire}";
+// Date remplie automatiquement côté serveur
+intention.DateIntention = DateTime.Now;
 
+// Si le client a saisi un commentaire, on le loggue comme message "client"
+if (!string.IsNullOrWhiteSpace(intention.Commentaire))
+{
+    _context.Communications.Add(new Communication
+    {
+        IdDossier = intention.IdDossier,
+        Message = intention.Commentaire.Trim(),
+        Origine = "client",
+        DateEnvoi = DateTime.Now
+    });
+
+    _context.HistoriqueActions.Add(new HistoriqueAction
+    {
+        IdDossier = intention.IdDossier,
+        ActionDetail = "Message envoyé par le client via le portail",
+        Acteur = "client",
+        DateAction = DateTime.Now
+    });
+}
             // ==============================
             // CAS 1 : Paiement immédiat
             // ==============================
@@ -110,13 +131,14 @@ namespace RecouvrementAPI.Controllers
                 });
 
                 // Alerte l'agent avec la date promise par le client
-                _context.Communications.Add(new Communication
-                {
-                    IdDossier = intention.IdDossier,
-                    Message = $"Le client a promis un paiement pour le {intention.DatePaiementPrevue.Value:dd/MM/yyyy}.{commentairePart}",
-                    Origine = "systeme",
-                    DateEnvoi = DateTime.Now
-                });
+                // Message de confirmation visible par le client
+_context.Communications.Add(new Communication
+{
+    IdDossier = intention.IdDossier,
+    Message = $"✅ Votre demande de type '{intention.TypeIntention}' a bien été enregistrée le {DateTime.Now:dd/MM/yyyy à HH:mm}. Un agent vous contactera sous 48h.",
+    Origine = "agent",
+    DateEnvoi = DateTime.Now
+});
 
                 // Trace dans l'historique
                 _context.HistoriqueActions.Add(new HistoriqueAction
